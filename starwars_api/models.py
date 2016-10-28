@@ -62,38 +62,59 @@ class Films(BaseModel):
 class BaseQuerySet(object):
 
     def __init__(self):
-        json_data = api_client.get_people()
-        self.total_items = json_data['count']
-        # self.page = 1 # transfer to iter/next?
-        # json_data = api_client.get_people("?page={}").format(self.page)
-        #print(json_data) #  currently printing <starwars_api.models.BaseModel object at 0x7f1d7794c518>
+        self.page = 1 # transfer to iter/next?
+        self.index = 0
+        self.json_data = api_client.get_people(**{'page': 1})
 
+        self.total_items = self.json_data['count']
+        self.results = self.json_data['results']
+        self.next_page = self.json_data['next'] # will be a URL until it is Null
+        
 
     def __iter__(self):
-        #initiate
-        self.page = 1 # transfer to iter/next?
-        self.json_data = api_client.get_people("?page={}").format(self.page)
-         
-        print(json_data)
-        
+        self.index = 0
+        return self 
+
     def __next__(self):
         """
         Must handle requests to next pages in SWAPI when objects in the current
         page were all consumed.
         """
-        # a = People.all() # returns a dict
-        # next_link = a['next'] should return something like http://swapi.co/api/people/?page=2
-        # call this next link after we have exhausted iterating through all People
-        # in a (the initial People.all)
-        # we need to call http://swapi.co/api/people/?page=2
-        # repeat until next is null
+        '''
+        try:
+            current_page = self.results
+            person = People(current_page[self.index])
+            print(self.index, person, len(self.results))
+            self.index += 1
+        except IndexError:
+            self.json_data = api_client.get_people(**{'page':"?page=2"})
+            self.results = self.json_data['results']
+            current_page = self.results
+            self.index = 0
+            person = People(current_page[self.index])
+            self.index += 1
+        '''
         
-        print(self.json_data)
+        current_page = self.results
+        person = People(current_page[self.index])
+        print(self.index, self.page, person)
+        self.index += 1
+
+        if self.index >= (len(self.results)):
+            self.page += 1
+            self.index = 0
+            self.json_data = api_client.get_people(**{'page': self.page})
+            self.total_items = self.json_data['count']
+            self.results = self.json_data['results']
+            self.next_page = self.json_data['next'] # will be a URL until it is Null
         
-        #print(results)
-        # obj = qs.next()
-        # self.assertTrue(isinstance(obj, People))
-        # return a people object People()
+            
+        if self.next_page == "NULL":
+            print("Stopped")
+            raise StopIteration
+
+        return person
+        
 
     next = __next__
 
