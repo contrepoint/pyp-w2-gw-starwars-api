@@ -22,8 +22,8 @@ class BaseModel(object):
         Returns an object of current Model requesting data to SWAPI using
         the api_client.
         """
-        method_name = getattr(api_client, "get_{}".format(cls.RESOURCE_NAME))
-        # the method_name will equal the method api_client.get_people()
+        # assuming the cls is People, method_name will be api_client.get_people 
+        method_name = getattr(api_client, "get_{}".format(cls.RESOURCE_NAME)) 
         json_data = method_name(resource_id) # api_client.get_people(1)
         return BaseModel(json_data)
 
@@ -36,6 +36,8 @@ class BaseModel(object):
         """
         if cls.RESOURCE_NAME == 'people':
             return PeopleQuerySet()
+        elif cls.RESOURCE_NAME == 'films':
+            return FilmsQuerySet()
 
 
 class People(BaseModel):
@@ -62,7 +64,7 @@ class Films(BaseModel):
 class BaseQuerySet(object):
 
     def __init__(self):
-        self.page = 1 # transfer to iter/next?
+        self.page = 1
         self.index = 0
         self.json_data = api_client.get_people(**{'page': 1})
 
@@ -72,8 +74,6 @@ class BaseQuerySet(object):
         
 
     def __iter__(self):
-        # ANSHUL's CODE
-        # self.index = 0
         return self 
 
     def __next__(self):
@@ -81,54 +81,29 @@ class BaseQuerySet(object):
         Must handle requests to next pages in SWAPI when objects in the current
         page were all consumed.
         """
-        # JANICE'S CODE
         while self.results: # it should break when raise StopIteration
-            # import ipdb; ipdb.set_trace()
             try:
                 current_page = self.results
                 individual_data = current_page[self.index]
-                # self.index += 1
             except IndexError:
-                print('indexerror')
-                # raise StopIteration
                 self.page += 1 # go to the next page
                 try:
                     self.get_next_page(self.page)
                 except SWAPIClientError:
                     raise StopIteration
-                self.index = 0 # you successfully got the next page so reset index
+                self.index = 0 # you successfully got the next page so reset the index
                 current_page = self.results
                 individual_data = current_page[self.index]
 
             self.index += 1
             item = People(individual_data)
-            print("index is {}".format(self.index))
-            print(item.name)
+
             return item
 
     def get_next_page(self, page_number):
         json_data = api_client.get_people(**{'page': page_number})
         self.results = json_data['results']
         self.next = json_data['next']
-        
-        # ANSHUL'S CODE
-        # if True:
-        #     raise StopIteration
-        
-        # current_page = self.results
-        # person = People(current_page[self.index])
-        # print(self.index, len(self.results), person, self.total_items)
-        # self.index += 1
-
-        # if self.index >= (len(self.results)):
-        #     self.page += 1
-        #     self.index = 0
-        #     self.json_data = api_client.get_people(**{'page': self.page})
-        #     self.total_items = self.json_data['count']
-        #     self.results = self.json_data['results']
-        #     self.next_page = self.json_data['next'] # will be a URL until it is Null
-        
-        # return person
         
 
     next = __next__
